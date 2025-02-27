@@ -38,7 +38,7 @@ image-builder some-docker-image.tar
 ```
 
 ### Configuring your host Kernel
-Run the following command on your host container to configure the kernel to allow tracking more connections - this is necessary to enable "NAT-ing" the guest firecracker VMs through the host in a highly concurrent manner. 
+Run the following command on your host container to configure the kernel to allow tracking more connections - this is necessary to enable "NAT-ing" the guest firecracker VMs through the host in a highly concurrent manner. This is necessary whether you are running the VMs in docker, or directly on your host; since docker shares the host kernel.
 
 ```shell
 sudo ./configure-host
