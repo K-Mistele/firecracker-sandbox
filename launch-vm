@@ -1,0 +1,105 @@
+#!/bin/bash 
+
+# Default paths to the Firecracker kernel and root filesystem
+DEFAULT_KERNEL_IMAGE_PATH="/usr/local/bin/vmlinux"
+DEFAULT_ROOTFS="/usr/local/bin/rootfs.ext4"
+
+# Function to display usage information
+usage() {
+    echo "Usage: $(basename $0) [OPTIONS]"
+    echo "Options:"
+    echo "  -k, --kernel PATH    Path to the kernel image (default: $DEFAULT_KERNEL_IMAGE_PATH)"
+    echo "  -r, --rootfs PATH    Path to the root filesystem (default: $DEFAULT_ROOTFS)"
+    echo "  -h, --help           Display this help message and exit"
+    exit 1
+}
+
+# Check if the script is running as root, if not, re-run with sudo
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "This script requires root privileges to resize the filesystem."
+        echo "Re-running with sudo..."
+        exec sudo "$0" "$@"
+        # If exec fails, exit
+        exit 1
+    fi
+}
+
+# Parse command line arguments
+KERNEL_IMAGE_PATH=$DEFAULT_KERNEL_IMAGE_PATH
+ROOTFS=$DEFAULT_ROOTFS
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -k|--kernel)
+            if [ -z "$2" ] || [[ $2 == -* ]]; then
+                echo "Error: --kernel option requires a path argument."
+                usage
+            fi
+            KERNEL_IMAGE_PATH="$2"
+            shift 2
+            ;;
+        -k=*|--kernel=*)
+            KERNEL_IMAGE_PATH="${1#*=}"
+            shift
+            ;;
+        -r|--rootfs)
+            if [ -z "$2" ] || [[ $2 == -* ]]; then
+                echo "Error: --rootfs option requires a path argument."
+                usage
+            fi
+            ROOTFS="$2"
+            shift 2
+            ;;
+        -r=*|--rootfs=*)
+            ROOTFS="${1#*=}"
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
+# Check the Firecracker kernel and root filesystem are present
+if [ ! -f $KERNEL_IMAGE_PATH ]; then
+    echo "Kernel cannot be found at $KERNEL_IMAGE_PATH, exiting!"
+    exit 1
+fi
+
+if [ ! -f $ROOTFS ]; then
+    echo "Root filesystem cannot be found at $ROOTFS, exiting!"
+    exit 1
+fi
+
+# Check for root privileges before proceeding with operations that require them
+check_root "$@"
+
+# Resize the root filesystem based on the FC_EPHEMERAL_STORAGE settings.
+# The firecracker-in-docker images created by image-builder are built
+# with the root filesystem deliberately shrunk to contain only those blocks
+# that are actually used. This step will grow it again to a configurable
+# (or default) larger size that in essence creates some (ephemeral) writable
+# space analogous to a regular container's writable layer.
+#
+# First run e2fsck with -y to non-interactively fix any issues with rootfs.
+# The && true prevents any non zero error code causing the script to terminate.
+e2fsck -y $ROOTFS &>/dev/null && true
+if [ -z ${FC_EPHEMERAL_STORAGE+x} ]; then # If FC_EPHEMERAL_STORAGE is unset
+    FSCK_RESULTS=($(e2fsck -n $ROOTFS 2> /dev/null))
+    # The output of e2fsck will be of the form:
+    # rootfs.ext4: clean, 29955/74240 files, 260774/296704 blocks
+    # so we parse into an array and blocks will be the 4th entry.
+    USED_BLOCKS=$(echo ${FSCK_RESULTS[4]} | cut -d"/" -f1)
+    USED_BLOCKS=$((USED_BLOCKS*2))
+
+    # Grow the root filesystem to its new size.
+    resize2fs $ROOTFS $USED_BLOCKS &>/dev/null && true
+elif [[ $FC_EPHEMERAL_STORAGE != "0" ]]; then
+    # Grow the root filesystem to its new size.
+    resize2fs -f $ROOTFS $FC_EPHEMERAL_STORAGE &>/dev/null && true
+fi

@@ -42,3 +42,18 @@ This will create a directory named something like `firecracker-<image_name>` whe
 For example, `python:3.12-slim` will result in a directory named `firecracker-python`
 
 At this point, you have the two essential components for creating a firecracker virtual machine.
+
+## Running the sandbox in docker
+
+If you want to run the VMs inside of a docker container, you need to build the sandbox VM image:
+```shell
+docker build -t firecracker-sandbox . --load 
+```
+
+
+## Running VMs on the host
+If you want to run the VMs on your host, you need to configure the host. NOTE that these are non-trivial changes and grant some additional privileges to manage networks to specific binaries on the host. 
+
+
+### Run one-time setup to configure the host
+sudo ./configure-host

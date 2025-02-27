@@ -1,0 +1,32 @@
+#!/bin/bash
+FC_VERSION=v1.10.1
+
+apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends e2tools curl ca-certificates iproute2 iptables && \
+    # To set up networking to the Firecracker MicroVM we need to establish
+    # a tap device in the container, then create a nat or bridge. To create
+    # the tap we need CAP_NET_ADMIN and to establish the nat routing we need
+    # CAP_NET_ADMIN and CAP_NET_RAW. To do this we create a copy of ip and
+    # iptables and use setcap to add the required capabilities to the copies.
+    cp /usr/bin/ip /usr/local/bin/ip && \
+    setcap cap_net_admin=eip /usr/local/bin/ip && \
+    cp /usr/sbin/iptables /usr/local/bin/iptables && \
+    setcap cap_net_admin,cap_net_raw=eip /usr/local/bin/iptables && \
+    # In addition to needing the required capabilities, iptables fails with:
+    # Fatal: can't open lock file /run/xtables.lock: Permission denied
+    # To resolve this we create the lock file with mode 0666
+    # https://patchwork.ozlabs.org/project/netdev/patch/2ef2150d-7149-cf39-0ea8-78edfc2c8d92@virtuozzo.com/
+    # This doesn't reduce security, as it's only a lockfile, and indeed
+    # upstream iptables has made the location configurable via the 
+    # XTABLES_LOCKFILE env var for exactly the scenario where the user has
+    # granted enough capabilities but lacks access to the XT_LOCK_NAME.
+    # https://git.netfilter.org/iptables/commit/?id=5105e844c2ff6a3e320bf8cdadc5094d4eaef2b7
+    # but unfortunately iptables from ubuntu:20.04 doesn't yet support that.
+    touch /run/xtables.lock && chmod 666 /run/xtables.lock && \
+    # Fetch firecracker release and install to /usr/local/bin
+    /usr/local/bin/configure-basic \
+    rm -rf release-${FC_VERSION}-x86_64 && \
+    apt-get clean && \
+    apt-get purge -y curl ca-certificates && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*

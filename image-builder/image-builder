@@ -732,6 +732,11 @@ set -e # Re-enable exit on error
 chmod_unwritable_dirs "$MOUNTPOINT" > /dev/null
 rm -rf $MOUNTPOINT
 
+# Copy the rootfs.ext4 to the launcher/rootfs directory
+mkdir -p "$(get_script_dir)/../launcher/rootfs"
+cp $FILESYSTEM "$(get_script_dir)/../launcher/rootfs/rootfs.ext4"
+echo "Copied $FILESYSTEM to $(get_script_dir)/../launcher/rootfs/rootfs.ext4"
+
 # Generate the directory containing everything needed to build the image
 if [ -z ${BASE+x} ]; then
     generate_firecracker_in_docker $IMAGE $FILESYSTEM

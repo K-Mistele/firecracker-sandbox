@@ -1,5 +1,6 @@
 ubuntu/
 launcher/kernel/vmlinux
+launcher/rootfs/rootfs.ext4
 kernel-builder/ubuntu
 busybox_cache/
 **/busybox_cache/
