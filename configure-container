@@ -1,8 +1,6 @@
 #!/bin/bash
 FC_VERSION=v1.10.1
-
-apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends e2tools curl ca-certificates iproute2 iptables && \
+apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends e2tools curl ca-certificates iproute2 iptables kmod && \
     # To set up networking to the Firecracker MicroVM we need to establish
     # a tap device in the container, then create a nat or bridge. To create
     # the tap we need CAP_NET_ADMIN and to establish the nat routing we need
@@ -24,9 +22,7 @@ apt-get update && \
     # but unfortunately iptables from ubuntu:20.04 doesn't yet support that.
     touch /run/xtables.lock && chmod 666 /run/xtables.lock && \
     # Fetch firecracker release and install to /usr/local/bin
-    /usr/local/bin/configure-basic \
-    rm -rf release-${FC_VERSION}-x86_64 && \
-    apt-get clean && \
-    apt-get purge -y curl ca-certificates && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+    curl -sSL https://github.com/firecracker-microvm/firecracker/releases/download/${FC_VERSION}/firecracker-${FC_VERSION}-x86_64.tgz | tar -xzv -C /usr/local/bin && \
+    cd /usr/local/bin && \
+    mv release-${FC_VERSION}-x86_64/firecracker-${FC_VERSION}-x86_64 firecracker && \
+    rm -rf release-${FC_VERSION}-x86_64 

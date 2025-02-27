@@ -10,6 +10,14 @@ COPY launch-vm /usr/local/bin/launch-vm
 COPY configure-basic /usr/local/bin/configure-basic
 COPY configure-container /usr/local/bin/configure-container
 
-# install dependencies
-RUN /usr/local/bin/configure-container
-# entrypoint was formally firestarter, but we don't want to start launching VMs until we need to.
+# setup container-specic deps and configs
+RUN /usr/local/bin/configure-container 
+
+# setup general firecracker configs
+RUN /usr/local/bin/configure-basic
+
+# clean up 
+RUN apt-get clean && \
+    apt-get purge -y curl ca-certificates && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*

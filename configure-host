@@ -1,22 +1,24 @@
-#!/bin/bash 
-./configure-basic
+#!/bin/bash
 
 # configuring 
-modprobe kvm_intel
+# Try loading nf_conntrack first (newer kernels), fall back to ip_conntrack (older kernels)
+modprobe nf_conntrack || modprobe ip_conntrack || echo "Warning: Could not load connection tracking module"
 
 # Configure packet forwarding
 sysctl -w net.ipv4.conf.all.forwarding=1
 
 # Avoid "nf_conntrack: table full, dropping packet"
-sysctl -w net.ipv4.netfilter.ip_conntrack_max=99999999
+# Try both new and old paths for conntrack_max
+if [ -f /proc/sys/net/netfilter/nf_conntrack_max ]; then
+    sysctl -w net.netfilter.nf_conntrack_max=99999999
+elif [ -f /proc/sys/net/nf_conntrack_max ]; then
+    sysctl -w net.nf_conntrack_max=99999999
+else
+    # Try the old path for backward compatibility
+    sysctl -w net.ipv4.netfilter.ip_conntrack_max=99999999 || true
+fi
 
 # Avoid "neighbour: arp_cache: neighbor table overflow!"
 sysctl -w net.ipv4.neigh.default.gc_thresh1=1024
 sysctl -w net.ipv4.neigh.default.gc_thresh2=2048
 sysctl -w net.ipv4.neigh.default.gc_thresh3=4096
-
-
-# Add CAP_NET_ADMIN to firecracker (for TUNSETIFF ioctl)
-setcap cap_net_admin=eip firecracker
-
-# to set up network for the VM we need a tap device. For docker we will need the following.

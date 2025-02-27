@@ -37,11 +37,12 @@ docker save some-docker-image some-docker-image.tar
 image-builder some-docker-image.tar
 ```
 
-This will create a directory named something like `firecracker-<image_name>` where `<image_name>` is a shortened form of the container tag you specified. 
+### Configuring your host Kernel
+Run the following command on your host container to configure the kernel to allow tracking more connections - this is necessary to enable "NAT-ing" the guest firecracker VMs through the host in a highly concurrent manner. 
 
-For example, `python:3.12-slim` will result in a directory named `firecracker-python`
-
-At this point, you have the two essential components for creating a firecracker virtual machine.
+```shell
+sudo ./configure-host
+```
 
 ## Running the sandbox in docker
 
@@ -53,7 +54,3 @@ docker build -t firecracker-sandbox . --load
 
 ## Running VMs on the host
 If you want to run the VMs on your host, you need to configure the host. NOTE that these are non-trivial changes and grant some additional privileges to manage networks to specific binaries on the host. 
-
-
-### Run one-time setup to configure the host
-sudo ./configure-host

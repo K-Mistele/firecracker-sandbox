@@ -12,7 +12,7 @@ set -euo pipefail
 install_firecracker() {
     curl -sSL https://github.com/firecracker-microvm/firecracker/releases/download/${FC_VERSION}/firecracker-${FC_VERSION}-x86_64.tgz | tar -xzv -C /usr/local/bin && \
     cd /usr/local/bin && \
-    mv release-${FC_VERSION}-x86_64/firecracker-${FC_VERSION}-x86_64 firecracker && \ecracker-${FC_VERSION}-x86_64 firecracker && \
+    mv release-${FC_VERSION}-x86_64/firecracker-${FC_VERSION}-x86_64 firecracker && \
     rm -rf release-${FC_VERSION}-x86_64
 }
 
@@ -28,7 +28,10 @@ check_root() {
 }
 
 # Check for root privileges before proceeding
+install_firecracker
+
 check_root "$@"
+
 
 
 # ensure that KVM access is properly configured
@@ -73,3 +76,7 @@ if [[ $(< /proc/sys/net/ipv4/ip_forward) != "1" ]]; then
     echo "WARNING: IPv4 forwarding is disabled. Networking will not work."
     exit 1
 fi
+
+
+# Add CAP_NET_ADMIN to firecracker (for TUNSETIFF ioctl)
+setcap cap_net_admin=eip /usr/local/bin/firecracker
