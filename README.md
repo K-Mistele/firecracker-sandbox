@@ -19,4 +19,26 @@ docker build -t firecracker-kernel-builder . --load # use --load if you're on do
 ./kernel-builder
 ```
 
-This will compile the kernel and save it to `launcher/kernel/vmlinux`
+This will compile the kernel and save it to `launcher/kernel/vmlinux`. Don't commit this file.
+
+### Creating a filesystem for your microvms using docker.
+
+You can create a microVM filesystem from a docker image on a remote repository, for example using python 3.12:
+```shell
+export PATH=$PATH:$(pwd)/image-builder
+image-builder python:3.12-slim
+```
+
+Or, you can use a docker image that you've already compiled and loaded into your docker build cache:
+```shell
+export PATH=$PATH:$(pwd)/image-builder
+docker build -t some-docker-image -f Dockerfile-something .
+docker save some-docker-image some-docker-image.tar
+image-builder some-docker-image.tar
+```
+
+This will create a directory named something like `firecracker-<image_name>` where `<image_name>` is a shortened form of the container tag you specified. 
+
+For example, `python:3.12-slim` will result in a directory named `firecracker-python`
+
+At this point, you have the two essential components for creating a firecracker virtual machine.

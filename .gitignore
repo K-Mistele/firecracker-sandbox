@@ -1,3 +1,6 @@
 ubuntu/
 launcher/kernel/vmlinux
 kernel-builder/ubuntu
+busybox_cache/
+**/busybox_cache/
+**/firecracker-*/
